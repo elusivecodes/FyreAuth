@@ -1,0 +1,40 @@
+{
+    "name": "fyre/auth",
+    "description": "An authentication and authorization library.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "elusivecodes",
+            "email": "elusivecodes@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Fyre\\Auth\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "fyre/error": "^4.0",
+        "fyre/inflector": "^2.0",
+        "fyre/middleware": "^2.1",
+        "fyre/orm": "^7.0",
+        "fyre/server": "^3.1",
+        "fyre/session": "^4.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.59",
+        "fyre/php-cs-fixer-config": "^1.0",
+        "phpunit/phpunit": "^10"
+    },
+    "scripts": {
+        "cs": "php-cs-fixer fix --ansi --verbose --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix --ansi --verbose --diff",
+        "test": "phpunit tests"
+    }
+}

@@ -1,0 +1,9 @@
+<phpunit bootstrap="tests/bootstrap.php">
+    <php>
+        <env name="MYSQL_HOST" value="127.0.0.1" force="true" />
+        <env name="MYSQL_USERNAME" value="root" force="true" />
+        <env name="MYSQL_PASSWORD" value="" force="true" />
+        <env name="MYSQL_DATABASE" value="test" force="true" />
+        <env name="MYSQL_PORT" value="3306" force="true" />
+    </php>
+</phpunit>
