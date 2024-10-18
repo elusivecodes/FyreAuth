@@ -616,7 +616,7 @@ $response = $middleware->process($request, $handler, ...$args);
 
 ### Unauthenticated Middleware
 
-This middleware will redirect a [*RedirectResponse*](https://github.com/elusivecodes/FyreServer#redirect-responses) if the user is authenticated.
+This middleware will return a [*RedirectResponse*](https://github.com/elusivecodes/FyreServer#redirect-responses) if the user is authenticated.
 
 ```php
 use Fyre\Auth\Middleware\UnauthenticatedMiddleware;
