@@ -6,6 +6,7 @@ namespace Tests;
 use Fyre\Auth\Access;
 use Fyre\Entity\Entity;
 use Fyre\Error\Exceptions\ForbiddenException;
+use Fyre\Error\Exceptions\NotFoundException;
 use Fyre\Error\Exceptions\UnauthorizedException;
 use Fyre\Middleware\MiddlewareQueue;
 use Fyre\Middleware\RequestHandler;
@@ -206,5 +207,28 @@ final class AuthMiddlewareTest extends TestCase
             '/',
             $response->getHeaderValue('Location')
         );
+    }
+
+    public function testUnauthenticatedMiddlewareFailJson(): void
+    {
+        $this->expectException(NotFoundException::class);
+
+        $this->login();
+
+        $queue = new MiddlewareQueue([
+            'unauthenticated',
+        ]);
+
+        $handler = new RequestHandler($queue);
+
+        $request = new ServerRequest([
+            'globals' => [
+                'server' => [
+                    'HTTP_ACCEPT' => 'application/json;q=0.9,text/plain',
+                ],
+            ],
+        ]);
+
+        $handler->handle($request);
     }
 }

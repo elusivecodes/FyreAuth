@@ -26,10 +26,10 @@ class AuthenticatedMiddleware extends Middleware
      */
     public function process(ServerRequest $request, RequestHandler $handler): ClientResponse
     {
-        if (!Auth::instance()->isLoggedIn()) {
-            throw new UnauthorizedException();
+        if (Auth::instance()->isLoggedIn()) {
+            return $handler->handle($request);
         }
 
-        return $handler->handle($request);
+        throw new UnauthorizedException();
     }
 }
