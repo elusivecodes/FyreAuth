@@ -67,7 +67,7 @@ Auth::setInstance($instance);
 - `$key` is a string representing the authenticator key, and will default to the [*Authenticator*](#authenticators) class name.
 
 ```php
-$authenticator = $auth->addAuthenticator($authenticator, $key);
+$auth->addAuthenticator($authenticator, $key);
 ```
 
 **Attempt**
@@ -454,7 +454,7 @@ Authenticate a [*ServerRequest*](https://github.com/elusivecodes/FyreServer#serv
 - `$request` is a [*ServerRequest*](https://github.com/elusivecodes/FyreServer#server-requests).
 
 ```php
-$authenticator->authenticate($request);
+$user = $authenticator->authenticate($request);
 ```
 
 **Before Response**
