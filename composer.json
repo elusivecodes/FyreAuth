@@ -23,7 +23,7 @@
         "fyre/error": "^4.0",
         "fyre/inflector": "^2.0",
         "fyre/middleware": "^2.1",
-        "fyre/orm": "^7.0",
+        "fyre/orm": "^8.0",
         "fyre/server": "^3.1",
         "fyre/session": "^4.0"
     },
