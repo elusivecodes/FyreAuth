@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace Fyre\Auth\Middleware;
 
+use Closure;
 use Fyre\Auth\Auth;
 use Fyre\Middleware\Middleware;
-use Fyre\Middleware\RequestHandler;
 use Fyre\Server\ClientResponse;
 use Fyre\Server\ServerRequest;
 
@@ -14,18 +14,28 @@ use Fyre\Server\ServerRequest;
  */
 class AuthMiddleware extends Middleware
 {
+    protected Auth $auth;
+
     /**
-     * Process a ServerRequest.
+     * New AuthenticatedMiddleware constructor.
+     *
+     * @param Auth $auth The Auth.
+     */
+    public function __construct(Auth $auth)
+    {
+        $this->auth = $auth;
+    }
+
+    /**
+     * Handle a ServerRequest.
      *
      * @param ServerRequest $request The ServerRequest.
-     * @param RequestHandler $handler The RequestHandler.
+     * @param Closure $next The next handler.
      * @return ClientResponse The ClientResponse.
      */
-    public function process(ServerRequest $request, RequestHandler $handler): ClientResponse
+    public function handle(ServerRequest $request, Closure $next): ClientResponse
     {
-        $auth = Auth::instance();
-
-        $authenticators = $auth->authenticators();
+        $authenticators = $this->auth->authenticators();
 
         foreach ($authenticators as $authenticator) {
             $user = $authenticator->authenticate($request);
@@ -34,13 +44,13 @@ class AuthMiddleware extends Middleware
                 continue;
             }
 
-            $auth->login($user);
+            $this->auth->login($user);
             break;
         }
 
-        $response = $handler->handle($request);
+        $response = $next($request);
 
-        $user = $auth->user();
+        $user = $this->auth->user();
         foreach ($authenticators as $authenticator) {
             $response = $authenticator->beforeResponse($response, $user);
         }

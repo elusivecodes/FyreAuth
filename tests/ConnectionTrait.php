@@ -5,17 +5,26 @@ namespace Tests;
 
 use Fyre\Auth\Access;
 use Fyre\Auth\Auth;
-use Fyre\Auth\Identity;
+use Fyre\Auth\Identifier;
 use Fyre\Auth\Middleware\AuthenticatedMiddleware;
 use Fyre\Auth\Middleware\AuthMiddleware;
 use Fyre\Auth\Middleware\AuthorizedMiddleware;
 use Fyre\Auth\Middleware\UnauthenticatedMiddleware;
 use Fyre\Auth\PolicyRegistry;
+use Fyre\Config\Config;
+use Fyre\Container\Container;
+use Fyre\DB\Connection;
 use Fyre\DB\ConnectionManager;
 use Fyre\DB\Handlers\Mysql\MysqlConnection;
+use Fyre\DB\TypeParser;
 use Fyre\Entity\EntityLocator;
 use Fyre\Middleware\MiddlewareRegistry;
 use Fyre\ORM\ModelRegistry;
+use Fyre\Router\Router;
+use Fyre\Schema\SchemaRegistry;
+use Fyre\Session\Session;
+use Fyre\Utility\Inflector;
+use Tests\Mock\MockSessionHandler;
 
 use function getenv;
 use function password_hash;
@@ -24,11 +33,23 @@ use const PASSWORD_DEFAULT;
 
 trait ConnectionTrait
 {
+    protected Access $access;
+
     protected Auth $auth;
+
+    protected Container $container;
+
+    protected Connection $db;
+
+    protected Identifier $identifier;
+
+    protected ModelRegistry $modelRegistry;
+
+    protected Session $session;
 
     protected function login(): void
     {
-        $user = Identity::getModel()
+        $user = $this->identifier->getModel()
             ->find()
             ->where(['Users.id' => 1])
             ->first();
@@ -36,28 +57,65 @@ trait ConnectionTrait
         $this->auth->login($user);
     }
 
-    public static function setUpBeforeClass(): void
+    protected function setUp(): void
     {
-        ConnectionManager::clear();
-        ConnectionManager::setConfig('default', [
-            'className' => MysqlConnection::class,
-            'host' => getenv('MYSQL_HOST'),
-            'username' => getenv('MYSQL_USERNAME'),
-            'password' => getenv('MYSQL_PASSWORD'),
-            'database' => getenv('MYSQL_DATABASE'),
-            'port' => getenv('MYSQL_PORT'),
-            'collation' => 'utf8mb4_unicode_ci',
-            'charset' => 'utf8mb4',
-            'compress' => true,
-            'persist' => false,
+        $this->container = new Container();
+        $this->container->singleton(TypeParser::class);
+        $this->container->singleton(ConnectionManager::class);
+        $this->container->singleton(Config::class);
+        $this->container->singleton(Session::class);
+        $this->container->singleton(Inflector::class);
+        $this->container->singleton(SchemaRegistry::class);
+        $this->container->singleton(ModelRegistry::class);
+        $this->container->singleton(EntityLocator::class);
+        $this->container->singleton(MiddlewareRegistry::class);
+        $this->container->singleton(PolicyRegistry::class);
+        $this->container->singleton(Session::class);
+        $this->container->singleton(Router::class);
+        $this->container->singleton(Auth::class);
+        $this->container->use(Config::class)->set('Database', [
+            'default' => [
+                'className' => MysqlConnection::class,
+                'host' => getenv('MYSQL_HOST'),
+                'username' => getenv('MYSQL_USERNAME'),
+                'password' => getenv('MYSQL_PASSWORD'),
+                'database' => getenv('MYSQL_DATABASE'),
+                'port' => getenv('MYSQL_PORT'),
+                'collation' => 'utf8mb4_unicode_ci',
+                'charset' => 'utf8mb4',
+                'compress' => true,
+                'persist' => true,
+            ],
+        ]);
+        $this->container->use(Config::class)->set('Session', [
+            'handler' => [
+                'className' => MockSessionHandler::class,
+            ],
+        ]);
+        $this->container->use(Config::class)->set('Auth.identifier', [
+            'identifierFields' => ['username', 'email'],
         ]);
 
-        $connection = ConnectionManager::use();
+        $this->container->use(Router::class)->get('login', fn(): string => '', ['as' => 'login']);
 
-        $connection->query('DROP TABLE IF EXISTS posts');
-        $connection->query('DROP TABLE IF EXISTS users');
+        $this->modelRegistry = $this->container->use(ModelRegistry::class);
+        $this->modelRegistry->addNamespace('Tests\Mock\Model');
 
-        $connection->query(<<<'EOT'
+        $this->container->use(EntityLocator::class)->addNamespace('Tests\Mock\Entity');
+        $this->container->use(PolicyRegistry::class)->addNamespace('Tests\Mock\Policy');
+
+        $this->db = $this->container->use(ConnectionManager::class)->use();
+
+        $this->container->use(MiddlewareRegistry::class)
+            ->map('auth', AuthMiddleware::class)
+            ->map('authenticated', AuthenticatedMiddleware::class)
+            ->map('authorized', AuthorizedMiddleware::class)
+            ->map('unauthenticated', UnauthenticatedMiddleware::class);
+
+        $this->db->query('DROP TABLE IF EXISTS posts');
+        $this->db->query('DROP TABLE IF EXISTS users');
+
+        $this->db->query(<<<'EOT'
             CREATE TABLE posts (
                 id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
                 user_id INT(10) UNSIGNED NOT NULL,
@@ -66,7 +124,7 @@ trait ConnectionTrait
             ) COLLATE='utf8mb4_unicode_ci' ENGINE=InnoDB
         EOT);
 
-        $connection->query(<<<'EOT'
+        $this->db->query(<<<'EOT'
             CREATE TABLE users (
                 id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
                 username VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb3_unicode_ci',
@@ -76,44 +134,18 @@ trait ConnectionTrait
                 PRIMARY KEY (id)
             ) COLLATE='utf8mb4_unicode_ci' ENGINE=InnoDB
         EOT);
-    }
-
-    public static function tearDownAfterClass(): void
-    {
-        $connection = ConnectionManager::use();
-        $connection->query('DROP TABLE IF EXISTS posts');
-        $connection->query('DROP TABLE IF EXISTS users');
-    }
-
-    protected function setUp(): void
-    {
-        EntityLocator::clear();
-        EntityLocator::addNamespace('Tests\Mock\Entity');
-
-        ModelRegistry::clear();
-        ModelRegistry::addNamespace('Tests\Mock\Model');
-
-        MiddlewareRegistry::clear();
-        MiddlewareRegistry::map('auth', AuthMiddleware::class);
-        MiddlewareRegistry::map('authenticated', AuthenticatedMiddleware::class);
-        MiddlewareRegistry::map('authorized', AuthorizedMiddleware::class);
-        MiddlewareRegistry::map('unauthenticated', UnauthenticatedMiddleware::class);
-
-        PolicyRegistry::clear();
-        PolicyRegistry::addNamespace('Tests\Mock\Policy');
-
-        Access::clear();
 
         $_SESSION = [];
 
-        $this->auth = new Auth();
-        Auth::setInstance($this->auth);
+        $this->session = $this->container->use(Session::class);
 
-        $Users = ModelRegistry::use('Users');
+        $this->session->start();
 
-        Identity::setIdentifierFields(['username', 'email']);
-        Identity::setPasswordField('password');
-        Identity::setModel($Users);
+        $this->auth = $this->container->use(Auth::class);
+        $this->access = $this->auth->access();
+        $this->identifier = $this->auth->identifier();
+
+        $Users = $this->modelRegistry->use('Users');
 
         $user = $Users->newEntity([
             'username' => 'test',
@@ -124,7 +156,7 @@ trait ConnectionTrait
 
         $Users->save($user);
 
-        $Posts = ModelRegistry::use('Posts');
+        $Posts = $this->modelRegistry->use('Posts');
 
         $posts = $Posts->newEntities([
             [
@@ -142,8 +174,7 @@ trait ConnectionTrait
 
     protected function tearDown(): void
     {
-        $connection = ConnectionManager::use();
-        $connection->query('TRUNCATE posts');
-        $connection->query('TRUNCATE users');
+        $this->db->query('DROP TABLE IF EXISTS posts');
+        $this->db->query('DROP TABLE IF EXISTS users');
     }
 }

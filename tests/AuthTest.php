@@ -41,7 +41,7 @@ final class AuthTest extends TestCase
 
     public function testAuthenticator(): void
     {
-        $authenticator = new MockAuthenticator();
+        $authenticator = $this->container->build(MockAuthenticator::class);
 
         $this->auth->addAuthenticator($authenticator);
 
@@ -60,7 +60,7 @@ final class AuthTest extends TestCase
 
     public function testAuthenticatorKey(): void
     {
-        $authenticator = new MockAuthenticator();
+        $authenticator = $this->container->build(MockAuthenticator::class);
 
         $this->auth->addAuthenticator($authenticator, 'mock');
 
@@ -72,7 +72,7 @@ final class AuthTest extends TestCase
 
     public function testAuthenticators(): void
     {
-        $authenticator = new MockAuthenticator();
+        $authenticator = $this->container->build(MockAuthenticator::class);
 
         $this->auth->addAuthenticator($authenticator, 'mock');
 

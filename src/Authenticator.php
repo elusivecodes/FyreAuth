@@ -16,15 +16,19 @@ abstract class Authenticator
 {
     protected static array $defaults = [];
 
+    protected Auth $auth;
+
     protected array $config;
 
     /**
-     * New Connection constructor.
+     * New Authenticator constructor.
      *
+     * @param Auth $auth The Auth.
      * @param array $options Options for the handler.
      */
-    public function __construct(array $options = [])
+    public function __construct(Auth $auth, array $options = [])
     {
+        $this->auth = $auth;
         $this->config = array_replace_recursive(static::$defaults, $options);
     }
 

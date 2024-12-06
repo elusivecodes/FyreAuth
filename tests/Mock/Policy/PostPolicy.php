@@ -3,20 +3,17 @@ declare(strict_types=1);
 
 namespace Tests\Mock\Policy;
 
-use Fyre\Auth\Policy;
-use Fyre\Entity\Entity;
+use Tests\Mock\Entity\Post;
+use Tests\Mock\Entity\User;
 
-/**
- * PostPolicy
- */
-class PostPolicy extends Policy
+class PostPolicy
 {
-    public function create(Entity|null $user): bool
+    public function create(User|null $user): bool
     {
         return (bool) $user;
     }
 
-    public function update(Entity|null $user, Entity $post): bool
+    public function update(User|null $user, Post $post): bool
     {
         return $user && $user->id === $post->id;
     }

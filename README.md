@@ -5,15 +5,16 @@
 
 ## Table Of Contents
 - [Installation](#installation)
-- [Auth](#auth)
-- [Identity](#identity)
+- [Basic Usage](#basic-usage)
+- [Methods](#methods)
 - [Access](#access)
-- [Policy Registry](#policy-registry)
-- [Policies](#policies)
+- [Identifier](#identifier)
 - [Authenticators](#authenticators)
     - [Cookie](#cookie)
     - [Session](#session)
     - [Token](#token)
+- [Policy Registry](#policy-registry)
+- [Policies](#policies)
 - [Middleware](#middleware)
 
 
@@ -33,35 +34,58 @@ use Fyre\Auth\Auth;
 ```
 
 
-## Auth
+## Basic Usage
 
-The *Auth* class provides the basis for authentication.
-
-```php
-$auth = new Auth();
-```
-
-**Instance**
-
-Load a shared *Auth* instance.
+- `$container` is a [*Container*](https://github.com/elusivecodes/FyreContainer).
+- `$router` is a [*Router*](https://github.com/elusivecodes/FyreRouter).
+- `$config` is a [*Config*](https://github.com/elusivecodes/FyreConfig).
 
 ```php
-$auth = Auth::instance();
+$auth = new Auth($container, $identifier, $router, $config)
 ```
 
-**Set Instance**
+Default configuration options will be resolved from the "*Auth*" key in the [*Config*](https://github.com/elusivecodes/FyreConfig).
 
-Set a shared *Auth* instance.
-
-- `$instance` is an *Auth*, or a *Closure* that returns an *Auth*.
+- `$options` is an array containing the configuration options.
+    - `loginRoute` is a string representing the login [route](https://github.com/elusivecodes/FyreRouter) alias, and will default to "*login*".
+    - `authenticators` is an array containing configuration options for the [*authenticators*](#authenticators).
+    - `identifier` is an array containing configuration options for the [*Identifier*](#identifier).
+        - `identifierFields` is string orn array containing the identifier field name(s), and will default to "*email*".
+        - `passwordField` is a string representing the password field name, and will default to "*password*".
+        - `modelAlias` is a string representing the model alias, and will default to "*Users*".
 
 ```php
-Auth::setInstance($instance);
+$container->use(Config::class)->set('Auth', $options);
 ```
 
-### Auth Methods
+**Autoloading**
+
+It is recommended to bind the *Auth* to the [*Container*](https://github.com/elusivecodes/FyreContainer) as a singleton.
+
+```php
+$container->singleton(Auth::class);
+```
+
+Any dependencies will be injected automatically when loading from the [*Container*](https://github.com/elusivecodes/FyreContainer).
+
+```php
+$auth = $container->use(Auth::class);
+```
+
+
+## Methods
+
+**Access**
+
+Get the [*Access*](#access).
+
+```php
+$access = $auth->access();
+```
 
 **Add Authenticator**
+
+Add an [*Authenticator*](#authenticators).
 
 - `$authenticator` is an [*Authenticator*](#authenticators).
 - `$key` is a string representing the authenticator key, and will default to the [*Authenticator*](#authenticators) class name.
@@ -100,6 +124,24 @@ Get the authenticators.
 $authenticators = $auth->authenticators();
 ```
 
+**Get Login URL**
+
+Get the login URL.
+
+- `$redirect` is a string or [*Uri*](https://github.com/elusivecodes/FyreURI) representing the redirect URL, and will default to *null*.
+
+```php
+$url = $auth->getLoginUrl($redirect);
+```
+
+**Identifier**
+
+Get the [*Identifier*](#identifier).
+
+```php
+$identifier = $auth->identifier();
+```
+
 **Is Logged In**
 
 Determine if the current user is logged in.
@@ -136,97 +178,7 @@ $user = $auth->user();
 ```
 
 
-## Identity
-
-The *Identity* class provides the basis for user identification.
-
-```php
-use Fyre\Auth\Identity;
-```
-
-**Attempt**
-
-Attempt to identify a user.
-
-- `$identifier` is a string representing the user identifier.
-- `$password` is a string representing the user password.
-
-```php
-$user = Identity::attempt($identifier, $password);
-```
-
-**Get Identifier Fields**
-
-Get the user identifier fields.
-
-```php
-$identifierFields = Identity::getIdentifierFields();
-```
-
-**Get Model**
-
-Get the identity [*Model*](https://github.com/elusivecodes/FyreORM#models).
-
-```php
-$model = Identity::getModel();
-```
-
-**Get Password Field**
-
-Get the user password field.
-
-```php
-$passwordField = Identity::getPasswordField();
-```
-
-**Identify**
-
-Find an identity by identifier.
-
-- `$identifier` is a string representing the user identifier.
-
-```php
-$user = Identity::identify($identifier);
-```
-
-**Set Identifier Fields**
-
-Get the user identifier fields.
-
-- `$identifierFields` is an array containing the user identifier fields.
-
-```php
-Identity::setIdentifierFields($identifierFields);
-```
-
-**Set Model**
-
-Set the identity [*Model*](https://github.com/elusivecodes/FyreORM#models).
-
-- `$model` is a [*Model*](https://github.com/elusivecodes/FyreORM#models).
-
-```php
-Identity::setModel($model);
-```
-
-**Set Password Field**
-
-Get the user password field.
-
-- `$passwordField` is an string representing the user password field.
-
-```php
-Identity::setPasswordField($passwordField);
-```
-
-
 ## Access
-
-The *Access* class provides the basis for authorization.
-
-```php
-use Fyre\Auth\Access;
-```
 
 **After**
 
@@ -235,7 +187,7 @@ Execute a callback after checking rules.
 - `$afterCallback` is a *Closure* that accepts the current user, access rule name, current result and any additional arguments.
 
 ```php
-Access::after($afterCallback);
+$access->after($afterCallback);
 ```
 
 **Allows**
@@ -247,7 +199,7 @@ Check whether an access rule is allowed.
 Any additional arguments supplied will be passed to the access rule callback or [*Policy*](#policies) method.
 
 ```php
-$result = Access::allows($rule, ...$args);
+$result = $access->allows($rule, ...$args);
 ```
 
 **Any**
@@ -259,7 +211,7 @@ Check whether any access rule is allowed.
 Any additional arguments supplied will be passed to the access rule callbacks or [*Policy*](#policies) methods.
 
 ```php
-$result = Access::any($rules, ...$args);
+$result = $access->any($rules, ...$args);
 ```
 
 **Authorize**
@@ -271,7 +223,7 @@ Authorize an access rule.
 Any additional arguments supplied will be passed to the access rule callback or [*Policy*](#policies) method.
 
 ```php
-Access::authorize($rule, ...$args);
+$access->authorize($rule, ...$args);
 ```
 
 **Before**
@@ -281,7 +233,7 @@ Execute a callback before checking rules.
 - `$beforeCallback` is a *Closure* that accepts the current user, access rule name and any additional arguments.
 
 ```php
-Access::before($beforeCallback);
+$access->before($beforeCallback);
 ```
 
 **Clear**
@@ -289,7 +241,7 @@ Access::before($beforeCallback);
 Clear all rules and callbacks.
 
 ```php
-Access::clear();
+$access->clear();
 ```
 
 **Define**
@@ -300,7 +252,7 @@ Define an access rule.
 - `$callback` is a *Closure* that accepts the current user and any additional arguments.
 
 ```php
-Access::define($rule, $callback);
+$access->define($rule, $callback);
 ```
 
 **Denies**
@@ -312,7 +264,7 @@ Check whether an access rule is not allowed.
 Any additional arguments supplied will be passed to the access rule callback or [*Policy*](#policies) method.
 
 ```php
-$result = Access::denies($rule, ...$args);
+$result = $access->denies($rule, ...$args);
 ```
 
 **None**
@@ -324,122 +276,55 @@ Check whether no access rule is allowed.
 Any additional arguments supplied will be passed to the access rule callbacks or [*Policy*](#policies) methods.
 
 ```php
-$result = Access::none($rules, ...$args);
+$result = $access->none($rules, ...$args);
 ```
 
 
-## Policy Registry
+## Identifier
 
-**Add Namespace**
+**Attempt**
 
-Add a namespace for loading policies.
+Attempt to identify a user.
 
-- `$namespace` is a string representing the namespace.
+- `$identifier` is a string representing the user identifier.
+- `$password` is a string representing the user password.
 
 ```php
-PolicyRegistry::addNamespace($namespace);
+$user = $identifier->attempt($identifier, $password);
 ```
 
-**Clear**
+**Get Identifier Fields**
 
-Clear all namespaces and policies.
+Get the user identifier fields.
 
 ```php
-PolicyRegistry::clear();
+$identifierFields = $identifier->getIdentifierFields();
 ```
-
-**Get Namespaces**
-
-Get the namespaces.
-
-```php
-$namespaces = PolicyRegistry::namespaces();
-```
-
-**Has Namespace**
-
-Determine if a namespace exists.
-
-- `$namespace` is a string representing the namespace.
-
-```php
-$hasNamespace = PolicyRegistry::hasNamespace($namespace);
-```
-
-**Load**
-
-Load a [*Policy*](#policies).
-
-- `$alias` is a string representing the [*Model*](https://github.com/elusivecodes/FyreORM#models) alias or class name.
-
-```php
-$policy = PolicyRegistry::load($alias);
-```
-
-**Map**
-
-Map an alias to a [*Policy*](#policies) class name.
-
-- `$alias` is a string representing the [*Model*](https://github.com/elusivecodes/FyreORM#models) alias or class name.
-- `$className` is a string representing the [*Policy*](#policies) class name.
-
-```php
-PolicyRegistry::map($alias, $className);
-```
-
-**Remove Namespace**
-
-Remove a namespace.
-
-- `$namespace` is a string representing the namespace.
-
-```php
-PolicyRegistry::removeNamespace($namespace);
-```
-
-**Unload**
-
-Unload a policy.
-
-- `$alias` is a string representing the [*Model*](https://github.com/elusivecodes/FyreORM#models) alias or class name.
-
-```php
-PolicyRegistry::unload($alias);
-```
-
-**Use**
-
-Load a shared [*Policy*](#policies) instance.
-
-- `$alias` is a string representing the [*Model*](https://github.com/elusivecodes/FyreORM#models) alias or class name.
-
-```php
-$policy = PolicyRegistry::use($alias);
-```
-
-
-## Policies
-
-Custom policies can be created by extending the `\Fyre\Auth\Policy` class, suffixing the singular alias with "*Policy*".
-
-Policy rules should be represented as methods on the class, that accept the current user and resolved [*Entity*](https://github.com/elusivecodes/FyreEntity) as arguments.
 
 **Get Model**
 
-Get the [*Model*](https://github.com/elusivecodes/FyreORM#models).
+Get the identity [*Model*](https://github.com/elusivecodes/FyreORM#models).
 
 ```php
-$model = $policy->getModel();
+$model = $identifier->getModel();
 ```
 
-**Resolve Entity**
+**Get Password Field**
 
-Resolve an [*Entity*](https://github.com/elusivecodes/FyreEntity) from access rule arguments.
-
-- `$args` is an array containing the access rule arguments.
+Get the user password field.
 
 ```php
-$entity = $policy->resolveEntity($args);
+$passwordField = $identifier->getPasswordField();
+```
+
+**Identify**
+
+Find an identity by identifier.
+
+- `$identifier` is a string representing the user identifier.
+
+```php
+$user = $identifier->identify($identifier);
 ```
 
 
@@ -495,6 +380,7 @@ use Fyre\Auth\Authenticators\CookieAuthenticator;
 
 The cookie authenticator can be loaded using custom configuration.
 
+- `$auth` is an *Auth*.
 - `$options` is an array containing configuration options.
     - `cookieName` is a string representing the cookie name, and will default to "*auth*".
     - `cookieOptions` is an array containing additional options for setting the cookie.
@@ -509,10 +395,10 @@ The cookie authenticator can be loaded using custom configuration.
     - `salt` is a string representing the salt to use when generating the token, and will default to *null*.
 
 ```php
-$authenticator = new CookieAuthenticator($options);
+$authenticator = new CookieAuthenticator($auth, $options);
 ```
 
-This authenticator is only active when the `$rememberMe` argument is set to *true* in the `Auth::attempt` and `Auth::login` methods.
+This authenticator is only active when the `$rememberMe` argument is set to *true* in the `$auth->attempt` or `$auth->login` methods.
 
 ### Session
 
@@ -522,12 +408,14 @@ use Fyre\Auth\Authenticators\SessionAuthenticator;
 
 The session authenticator can be loaded using custom configuration.
 
+- `$auth` is an *Auth*.
+- `$session` is a [*Session*](https://github.com/elusivecodes/FyreSession).
 - `$options` is an array containing configuration options.
     - `sessionKey` is a string representing the session key, and will default to "*auth*".
     - `sessionField` is a string representing the session field of the user, and will default to "*id*".
 
 ```php
-$authenticator = new SessionAuthenticator($options);
+$authenticator = new SessionAuthenticator($auth, $session, $options);
 ```
 
 ### Token
@@ -538,6 +426,7 @@ use Fyre\Auth\Authenticators\TokenAuthenticator;
 
 The token authenticator can be loaded using custom configuration.
 
+- `$auth` is an *Auth*.
 - `$options` is an array containing configuration options.
     - `tokenHeader` is a string representing the token header name, and will default to "*Authorization*".
     - `tokenHeaderPrefix` is a string representing the token header prefix, and will default to "*Bearer*".
@@ -545,8 +434,126 @@ The token authenticator can be loaded using custom configuration.
     - `tokenField` is a string representing the token field of the user, and will default to "*token*".
 
 ```php
-$authenticator = new TokenAuthenticator($options);
+$authenticator = new TokenAuthenticator($auth, $options);
 ```
+
+
+## Policy Registry
+
+```php
+use Fyre\Auth\PolicyRegistry;
+```
+
+- `$container` is a [*Container*](https://github.com/elusivecodes/FyreContainer).
+- `$inflector` is an [*Inflector*](https://github.com/elusivecodes/FyreInflector).
+
+```php
+$policyRegistry = new PolicyRegistry($container, $inflector);
+```
+
+**Add Namespace**
+
+Add a namespace for loading policies.
+
+- `$namespace` is a string representing the namespace.
+
+```php
+$policyRegistry->addNamespace($namespace);
+```
+
+**Build**
+
+Build a [*Policy*](#policies).
+
+- `$alias` is a string representing the [*Model*](https://github.com/elusivecodes/FyreORM#models) alias or class name.
+
+```php
+$policy = $policyRegistry->build($alias);
+```
+
+**Clear**
+
+Clear all namespaces and policies.
+
+```php
+$policyRegistry->clear();
+```
+
+**Get Namespaces**
+
+Get the namespaces.
+
+```php
+$namespaces = $policyRegistry->namespaces();
+```
+
+**Has Namespace**
+
+Determine if a namespace exists.
+
+- `$namespace` is a string representing the namespace.
+
+```php
+$hasNamespace = $policyRegistry->hasNamespace($namespace);
+```
+
+**Map**
+
+Map an alias to a [*Policy*](#policies) class name.
+
+- `$alias` is a string representing the [*Model*](https://github.com/elusivecodes/FyreORM#models) alias or class name.
+- `$className` is a string representing the [*Policy*](#policies) class name.
+
+```php
+$policyRegistry->map($alias, $className);
+```
+
+**Remove Namespace**
+
+Remove a namespace.
+
+- `$namespace` is a string representing the namespace.
+
+```php
+$policyRegistry->removeNamespace($namespace);
+```
+
+**Resolve Alias**
+
+Resolve a modal alias.
+
+- `$alias` is a model alias or class name.
+
+```php
+$alias = $policyRegistry->resolveAlias($alias);
+```
+
+**Unload**
+
+Unload a policy.
+
+- `$alias` is a string representing the [*Model*](https://github.com/elusivecodes/FyreORM#models) alias or class name.
+
+```php
+$policyRegistry->unload($alias);
+```
+
+**Use**
+
+Load a shared [*Policy*](#policies) instance.
+
+- `$alias` is a string representing the [*Model*](https://github.com/elusivecodes/FyreORM#models) alias or class name.
+
+```php
+$policy = $policyRegistry->use($alias);
+```
+
+
+## Policies
+
+Policies can be created by suffixing the singular model alias with "*Policy*" as the class name.
+
+Policy rules should be represented as methods on the class, that accept the current user and resolved [*Entity*](https://github.com/elusivecodes/FyreEntity) as arguments.
 
 
 ## Middleware
@@ -559,80 +566,126 @@ use Fyre\Auth\Middleware\AuthMiddleware;
 
 This middleware will authenticate using the loaded authenticators, and add any authentication headers to the response.
 
+- `$auth` is an *Auth*.
+
 ```php
-$middleware = new AuthMiddleware();
+$middleware = new AuthMiddleware($auth);
 ```
 
-**Process**
+Any dependencies will be injected automatically when loading from the [*Container*](https://github.com/elusivecodes/FyreContainer).
+
+```php
+$middleware = $container->use(AuthMiddleware::class);
+```
+
+**Handle**
+
+Handle a [*ServerRequest*](https://github.com/elusivecodes/FyreServer#server-requests).
 
 - `$request` is a [*ServerRequest*](https://github.com/elusivecodes/FyreServer#server-requests).
-- `$handler` is a [*RequestHandler*](https://github.com/elusivecodes/FyreMiddleware#request-handlers).
+- `$next` is a *Closure*.
 
 ```php
-$response = $middleware->process($request, $handler);
+$response = $middleware->handle($request, $next);
 ```
 
-### Authenticated Middleware
+This method will return a [*ClientResponse*](https://github.com/elusivecodes/FyreServer#client-responses).
 
-This middleware will throw an [*UnauthorizedException*](https://github.com/elusivecodes/FyreError#http-exceptions) if the user is not authenticated.
+### Authenticated Middleware
 
 ```php
 use Fyre\Auth\Middleware\AuthenticatedMiddleware;
 ```
 
+This middleware will throw an [*UnauthorizedException*](https://github.com/elusivecodes/FyreError#http-exceptions) or return a login [*RedirectResponse*](https://github.com/elusivecodes/FyreServer#redirect-responses) if the user is not authenticated.
+
+- `$auth` is an *Auth*.
+
 ```php
-$middleware = new AuthenticatedMiddleware();
+$middleware = new AuthenticatedMiddleware($auth);
 ```
 
-**Process**
+Any dependencies will be injected automatically when loading from the [*Container*](https://github.com/elusivecodes/FyreContainer).
+
+```php
+$middleware = $container->use(AuthenticatedMiddleware::class);
+```
+
+**Handle**
+
+Handle a [*ServerRequest*](https://github.com/elusivecodes/FyreServer#server-requests).
 
 - `$request` is a [*ServerRequest*](https://github.com/elusivecodes/FyreServer#server-requests).
-- `$handler` is a [*RequestHandler*](https://github.com/elusivecodes/FyreMiddleware#request-handlers).
+- `$next` is a *Closure*.
 
 ```php
-$response = $middleware->process($request, $handler);
+$response = $middleware->handle($request, $next);
 ```
 
-### Authorized Middleware
+This method will return a [*ClientResponse*](https://github.com/elusivecodes/FyreServer#client-responses).
 
-This middleware will throw a [*ForbiddenException*](https://github.com/elusivecodes/FyreError#http-exceptions) if the user is not authorized.
+### Authorized Middleware
 
 ```php
 use Fyre\Auth\Middleware\AuthorizedMiddleware;
 ```
 
+This middleware will throw a [*ForbiddenException*](https://github.com/elusivecodes/FyreError#http-exceptions) or a login [*RedirectResponse*](https://github.com/elusivecodes/FyreServer#redirect-responses) if the user is not authorized.
+
+- `$auth` is an *Auth*.
+
 ```php
-$middleware = new AuthorizedMiddleware();
+$middleware = new AuthorizedMiddleware($auth);
 ```
 
-**Process**
+Any dependencies will be injected automatically when loading from the [*Container*](https://github.com/elusivecodes/FyreContainer).
+
+```php
+$middleware = $container->use(AuthorizedMiddleware::class);
+```
+
+**Handle**
+
+Handle a [*ServerRequest*](https://github.com/elusivecodes/FyreServer#server-requests).
 
 - `$request` is a [*ServerRequest*](https://github.com/elusivecodes/FyreServer#server-requests).
-- `$handler` is a [*RequestHandler*](https://github.com/elusivecodes/FyreMiddleware#request-handlers).
+- `$next` is a *Closure*.
 
 ```php
-$response = $middleware->process($request, $handler, ...$args);
+$response = $middleware->handle($request, $next);
 ```
 
-### Unauthenticated Middleware
+This method will return a [*ClientResponse*](https://github.com/elusivecodes/FyreServer#client-responses).
 
-This middleware will return a [*RedirectResponse*](https://github.com/elusivecodes/FyreServer#redirect-responses) if the user is authenticated.
+### Unauthenticated Middleware
 
 ```php
 use Fyre\Auth\Middleware\UnauthenticatedMiddleware;
 ```
 
-- `$redirect` is a [*Uri*](https://github.com/elusivecodes/FyreURI) or string representing the URI to redirect to, and will default to "*/*".
+This middleware will throw a [*NotFoundException*](https://github.com/elusivecodes/FyreError#http-exceptions) if the user is authenticated.
+
+- `$auth` is an *Auth*.
 
 ```php
-$middleware = new UnauthenticatedMiddleware($redirect);
+$middleware = new UnauthenticatedMiddleware($auth);
 ```
 
-**Process**
+Any dependencies will be injected automatically when loading from the [*Container*](https://github.com/elusivecodes/FyreContainer).
+
+```php
+$middleware = $container->use(UnauthenticatedMiddleware::class);
+```
+
+**Handle**
+
+Handle a [*ServerRequest*](https://github.com/elusivecodes/FyreServer#server-requests).
 
 - `$request` is a [*ServerRequest*](https://github.com/elusivecodes/FyreServer#server-requests).
-- `$handler` is a [*RequestHandler*](https://github.com/elusivecodes/FyreMiddleware#request-handlers).
+- `$next` is a *Closure*.
 
 ```php
-$response = $middleware->process($request, $handler);
+$response = $middleware->handle($request, $next);
 ```
+
+This method will return a [*ClientResponse*](https://github.com/elusivecodes/FyreServer#client-responses).

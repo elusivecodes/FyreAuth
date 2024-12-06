@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Fyre\Auth\Authenticators;
 
+use Fyre\Auth\Auth;
 use Fyre\Auth\Authenticator;
-use Fyre\Auth\Identity;
 use Fyre\Entity\Entity;
 use Fyre\Server\ServerRequest;
 use Fyre\Session\Session;
@@ -19,6 +19,21 @@ class SessionAuthenticator extends Authenticator
         'sessionField' => 'id',
     ];
 
+    protected Session $session;
+
+    /**
+     * New Authenticator constructor.
+     *
+     * @param Auth $auth The Auth.
+     * @param array $options Options for the handler.
+     */
+    public function __construct(Auth $auth, Session $session, array $options = [])
+    {
+        parent::__construct($auth, $options);
+
+        $this->session = $session;
+    }
+
     /**
      * Authenticate a ServerRequest.
      *
@@ -27,13 +42,13 @@ class SessionAuthenticator extends Authenticator
      */
     public function authenticate(ServerRequest $request): Entity|null
     {
-        $id = Session::get($this->config['sessionKey']);
+        $id = $this->session->get($this->config['sessionKey']);
 
         if (!$id) {
             return null;
         }
 
-        $Model = Identity::getModel();
+        $Model = $this->auth->identifier()->getModel();
 
         return $Model->find()
             ->where([
@@ -53,12 +68,12 @@ class SessionAuthenticator extends Authenticator
     {
         $sessionKey = $this->config['sessionKey'];
 
-        if (!Session::has($sessionKey)) {
-            Session::refresh();
+        if (!$this->session->has($sessionKey)) {
+            $this->session->refresh();
 
             $id = $user->get($this->config['sessionField']);
 
-            Session::set($sessionKey, $id);
+            $this->session->set($sessionKey, $id);
         }
     }
 
@@ -69,7 +84,7 @@ class SessionAuthenticator extends Authenticator
      */
     public function logout(): void
     {
-        Session::delete($this->config['sessionKey']);
-        Session::refresh(true);
+        $this->session->delete($this->config['sessionKey']);
+        $this->session->refresh(true);
     }
 }

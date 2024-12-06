@@ -3,15 +3,12 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Fyre\Auth\Access;
 use Fyre\Entity\Entity;
 use Fyre\Error\Exceptions\ForbiddenException;
 use Fyre\Error\Exceptions\NotFoundException;
-use Fyre\Error\Exceptions\UnauthorizedException;
 use Fyre\Middleware\MiddlewareQueue;
 use Fyre\Middleware\RequestHandler;
 use Fyre\Server\ClientResponse;
-use Fyre\Server\RedirectResponse;
 use Fyre\Server\ServerRequest;
 use PHPUnit\Framework\TestCase;
 use Tests\Mock\Authenticator\MockAuthenticator;
@@ -28,9 +25,9 @@ final class AuthMiddlewareTest extends TestCase
             'authenticated',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
         $this->assertInstanceOf(
             ClientResponse::class,
@@ -40,30 +37,39 @@ final class AuthMiddlewareTest extends TestCase
 
     public function testAuthenticatedMiddlewareFail(): void
     {
-        $this->expectException(UnauthorizedException::class);
-
         $queue = new MiddlewareQueue([
             'authenticated',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
-        $handler->handle($request);
+        $response = $handler->handle($request);
+
+        $this->assertInstanceOf(
+            ClientResponse::class,
+            $response
+        );
+
+        $this->assertSame(
+            '/login',
+            $response->getHeaderValue('Location')
+        );
     }
 
     public function testAuthMiddleware(): void
     {
-        $this->auth->addAuthenticator(new MockAuthenticator());
+        $authenticator = $this->container->build(MockAuthenticator::class);
+        $this->auth->addAuthenticator($authenticator);
 
         $queue = new MiddlewareQueue([
             'auth',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
         $response = $handler->handle($request);
 
@@ -85,7 +91,7 @@ final class AuthMiddlewareTest extends TestCase
         $this->login();
 
         $ran = false;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -97,9 +103,9 @@ final class AuthMiddlewareTest extends TestCase
             'authorized:test',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
         $this->assertInstanceOf(
             ClientResponse::class,
@@ -114,7 +120,7 @@ final class AuthMiddlewareTest extends TestCase
         $this->login();
 
         $ran = false;
-        Access::define('test', function(Entity|null $user, string $value) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user, string $value) use (&$ran): bool {
             $ran = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -127,9 +133,9 @@ final class AuthMiddlewareTest extends TestCase
             'authorized:test,test',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
         $this->assertInstanceOf(
             ClientResponse::class,
@@ -145,7 +151,7 @@ final class AuthMiddlewareTest extends TestCase
 
         $this->expectException(ForbiddenException::class);
 
-        Access::define('test', function(Entity|null $user): bool {
+        $this->access->define('test', function(Entity|null $user): bool {
             $this->assertInstanceOf(Entity::class, $user);
 
             return false;
@@ -155,9 +161,9 @@ final class AuthMiddlewareTest extends TestCase
             'authorized:test',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
         $handler->handle($request);
     }
@@ -168,9 +174,9 @@ final class AuthMiddlewareTest extends TestCase
             'unauthenticated',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
         $response = $handler->handle($request);
 
@@ -186,27 +192,19 @@ final class AuthMiddlewareTest extends TestCase
 
     public function testUnauthenticatedMiddlewareFail(): void
     {
+        $this->expectException(NotFoundException::class);
+
         $this->login();
 
         $queue = new MiddlewareQueue([
             'unauthenticated',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
-        $response = $handler->handle($request);
-
-        $this->assertInstanceOf(
-            RedirectResponse::class,
-            $response
-        );
-
-        $this->assertSame(
-            '/',
-            $response->getHeaderValue('Location')
-        );
+        $handler->handle($request);
     }
 
     public function testUnauthenticatedMiddlewareFailJson(): void
@@ -219,12 +217,14 @@ final class AuthMiddlewareTest extends TestCase
             'unauthenticated',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest([
-            'globals' => [
-                'server' => [
-                    'HTTP_ACCEPT' => 'application/json;q=0.9,text/plain',
+        $request = $this->container->build(ServerRequest::class, [
+            'options' => [
+                'globals' => [
+                    'server' => [
+                        'HTTP_ACCEPT' => 'application/json;q=0.9,text/plain',
+                    ],
                 ],
             ],
         ]);

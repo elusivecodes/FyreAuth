@@ -6,12 +6,10 @@ namespace Tests;
 use Fyre\Auth\Authenticators\CookieAuthenticator;
 use Fyre\Auth\Authenticators\SessionAuthenticator;
 use Fyre\Auth\Authenticators\TokenAuthenticator;
-use Fyre\Auth\Identity;
 use Fyre\Middleware\MiddlewareQueue;
 use Fyre\Middleware\RequestHandler;
 use Fyre\Server\ClientResponse;
 use Fyre\Server\ServerRequest;
-use Fyre\Session\Session;
 use PHPUnit\Framework\TestCase;
 
 use function json_decode;
@@ -27,23 +25,26 @@ final class AuthenticatorTest extends TestCase
 
     public function testCookieAuthenticator(): void
     {
-        $this->auth->addAuthenticator(new CookieAuthenticator());
+        $authenticator = $this->container->build(CookieAuthenticator::class);
+        $this->auth->addAuthenticator($authenticator);
 
         $queue = new MiddlewareQueue([
             'auth',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $user = Identity::identify('test@test.com');
+        $user = $this->identifier->identify('test@test.com');
 
         $tokenHash = password_hash('test@test.com'.$user->password, PASSWORD_DEFAULT);
         $auth = json_encode(['test@test.com', $tokenHash]);
 
-        $request = new ServerRequest([
-            'globals' => [
-                'cookie' => [
-                    'auth' => $auth,
+        $request = $this->container->build(ServerRequest::class, [
+            'options' => [
+                'globals' => [
+                    'cookie' => [
+                        'auth' => $auth,
+                    ],
                 ],
             ],
         ]);
@@ -60,15 +61,16 @@ final class AuthenticatorTest extends TestCase
 
     public function testCookieAuthenticatorLogin(): void
     {
-        $this->auth->addAuthenticator(new CookieAuthenticator());
+        $authenticator = $this->container->build(CookieAuthenticator::class);
+        $this->auth->addAuthenticator($authenticator);
 
         $queue = new MiddlewareQueue([
             'auth',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
         $this->auth->attempt('test@test.com', 'test');
 
@@ -90,15 +92,16 @@ final class AuthenticatorTest extends TestCase
 
     public function testCookieAuthenticatorLoginRemember(): void
     {
-        $this->auth->addAuthenticator(new CookieAuthenticator());
+        $authenticator = $this->container->build(CookieAuthenticator::class);
+        $this->auth->addAuthenticator($authenticator);
 
         $queue = new MiddlewareQueue([
             'auth',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
         $this->auth->attempt('test@test.com', 'test', true);
 
@@ -133,15 +136,16 @@ final class AuthenticatorTest extends TestCase
 
     public function testCookieAuthenticatorLogout(): void
     {
-        $this->auth->addAuthenticator(new CookieAuthenticator());
+        $authenticator = $this->container->build(CookieAuthenticator::class);
+        $this->auth->addAuthenticator($authenticator);
 
         $queue = new MiddlewareQueue([
             'auth',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
         $this->auth->attempt('test@test.com', 'test', true);
         $this->auth->logout();
@@ -163,17 +167,18 @@ final class AuthenticatorTest extends TestCase
 
     public function testSessionAuthenticator(): void
     {
-        $this->auth->addAuthenticator(new SessionAuthenticator());
+        $authenticator = $this->container->build(SessionAuthenticator::class);
+        $this->auth->addAuthenticator($authenticator);
 
         $queue = new MiddlewareQueue([
             'auth',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest();
+        $request = $this->container->build(ServerRequest::class);
 
-        Session::set('auth', 1);
+        $this->session->set('auth', 1);
 
         $response = $handler->handle($request);
 
@@ -187,7 +192,8 @@ final class AuthenticatorTest extends TestCase
 
     public function testSessionAuthenticatorLogin(): void
     {
-        $this->auth->addAuthenticator(new SessionAuthenticator());
+        $authenticator = $this->container->build(SessionAuthenticator::class);
+        $this->auth->addAuthenticator($authenticator);
 
         $this->auth->attempt('test@test.com', 'test');
 
@@ -195,13 +201,14 @@ final class AuthenticatorTest extends TestCase
 
         $this->assertSame(
             1,
-            Session::get('auth')
+            $this->session->get('auth')
         );
     }
 
     public function testSessionAuthenticatorLogout(): void
     {
-        $this->auth->addAuthenticator(new SessionAuthenticator());
+        $authenticator = $this->container->build(SessionAuthenticator::class);
+        $this->auth->addAuthenticator($authenticator);
 
         $this->auth->attempt('test@test.com', 'test');
         $this->auth->logout();
@@ -209,24 +216,27 @@ final class AuthenticatorTest extends TestCase
         $this->assertFalse($this->auth->isLoggedIn());
 
         $this->assertNull(
-            Session::get('auth')
+            $this->session->get('auth')
         );
     }
 
     public function testTokenAuthenticator(): void
     {
-        $this->auth->addAuthenticator(new TokenAuthenticator());
+        $authenticator = $this->container->build(TokenAuthenticator::class);
+        $this->auth->addAuthenticator($authenticator);
 
         $queue = new MiddlewareQueue([
             'auth',
         ]);
 
-        $handler = new RequestHandler($queue);
+        $handler = $this->container->build(RequestHandler::class, ['queue' => $queue]);
 
-        $request = new ServerRequest([
-            'globals' => [
-                'server' => [
-                    'HTTP_AUTHORIZATION' => 'Bearer Ew7tqx8kH6QsNe8SS0tVT0BX2LIRVQyl',
+        $request = $this->container->build(ServerRequest::class, [
+            'options' => [
+                'globals' => [
+                    'server' => [
+                        'HTTP_AUTHORIZATION' => 'Bearer Ew7tqx8kH6QsNe8SS0tVT0BX2LIRVQyl',
+                    ],
                 ],
             ],
         ]);

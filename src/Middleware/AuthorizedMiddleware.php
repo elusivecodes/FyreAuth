@@ -3,11 +3,12 @@ declare(strict_types=1);
 
 namespace Fyre\Auth\Middleware;
 
-use Fyre\Auth\Access;
+use Closure;
+use Fyre\Auth\Auth;
 use Fyre\Error\Exceptions\ForbiddenException;
 use Fyre\Middleware\Middleware;
-use Fyre\Middleware\RequestHandler;
 use Fyre\Server\ClientResponse;
+use Fyre\Server\RedirectResponse;
 use Fyre\Server\ServerRequest;
 
 /**
@@ -15,20 +16,41 @@ use Fyre\Server\ServerRequest;
  */
 class AuthorizedMiddleware extends Middleware
 {
+    protected Auth $auth;
+
     /**
-     * Process a ServerRequest.
+     * New AuthorizedMiddleware constructor.
+     *
+     * @param Auth $auth The Auth.
+     */
+    public function __construct(Auth $auth)
+    {
+        $this->auth = $auth;
+    }
+
+    /**
+     * Handle a ServerRequest.
      *
      * @param ServerRequest $request The ServerRequest.
-     * @param RequestHandler $handler The RequestHandler.
+     * @param Closure $next The next handler.
      * @param mixed ...$args The arguments for the access rule.
      * @return ClientResponse The ClientResponse.
      *
      * @throws ForbiddenException is the user is not authorized.
      */
-    public function process(ServerRequest $request, RequestHandler $handler, mixed ...$args): ClientResponse
+    public function handle(ServerRequest $request, Closure $next, mixed ...$args): ClientResponse
     {
-        if (Access::allows(...$args)) {
-            return $handler->handle($request);
+        if ($this->auth->access()->allows(...$args)) {
+            return $next($request);
+        }
+
+        if (
+            !$this->auth->isLoggedIn() &&
+            $request->negotiate('content', ['text/html', 'application/json']) !== 'application/json'
+        ) {
+            $redirect = $this->auth->getLoginUrl($request->getUri());
+
+            return new RedirectResponse($redirect);
         }
 
         throw new ForbiddenException();

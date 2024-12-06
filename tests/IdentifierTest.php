@@ -3,18 +3,17 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Fyre\Auth\Identity;
 use PHPUnit\Framework\TestCase;
 use Tests\Mock\Entity\User;
 use Tests\Mock\Model\UsersModel;
 
-final class IdentityTest extends TestCase
+final class IdentifierTest extends TestCase
 {
     use ConnectionTrait;
 
     public function testAttempt(): void
     {
-        $user = Identity::attempt('test@test.com', 'test');
+        $user = $this->identifier->attempt('test@test.com', 'test');
 
         $this->assertInstanceOf(
             User::class,
@@ -24,34 +23,34 @@ final class IdentityTest extends TestCase
 
     public function testAttemptInvalidPassword(): void
     {
-        $user = Identity::attempt('test@test.com', 'invalid');
+        $user = $this->identifier->attempt('test@test.com', 'invalid');
 
         $this->assertNull($user);
     }
 
     public function testAttemptInvalidUsername(): void
     {
-        $user = Identity::attempt('invalid@test.com', 'any');
+        $user = $this->identifier->attempt('invalid@test.com', 'any');
 
         $this->assertNull($user);
     }
 
     public function testAttemptRehash(): void
     {
-        $user = Identity::identify('test@test.com');
+        $user = $this->identifier->identify('test@test.com');
 
         $user->password = password_hash('test', PASSWORD_ARGON2I);
 
-        Identity::getModel()->save($user);
+        $this->identifier->getModel()->save($user);
 
-        $user = Identity::attempt('test@test.com', 'test');
+        $user = $this->identifier->attempt('test@test.com', 'test');
 
         $this->assertInstanceOf(
             User::class,
             $user
         );
 
-        $user = Identity::identify('test@test.com');
+        $user = $this->identifier->identify('test@test.com');
 
         $this->assertFalse(
             password_needs_rehash($user->password, PASSWORD_DEFAULT)
@@ -62,13 +61,13 @@ final class IdentityTest extends TestCase
     {
         $this->assertSame(
             ['username', 'email'],
-            Identity::getIdentifierFields()
+            $this->identifier->getIdentifierFields()
         );
     }
 
     public function testGetModel(): void
     {
-        $Model = Identity::getModel();
+        $Model = $this->identifier->getModel();
 
         $this->assertInstanceOf(
             UsersModel::class,
@@ -80,13 +79,13 @@ final class IdentityTest extends TestCase
     {
         $this->assertSame(
             'password',
-            Identity::getPasswordField()
+            $this->identifier->getPasswordField()
         );
     }
 
     public function testIdentify(): void
     {
-        $user = Identity::identify('test@test.com');
+        $user = $this->identifier->identify('test@test.com');
 
         $this->assertInstanceOf(
             User::class,
@@ -96,7 +95,7 @@ final class IdentityTest extends TestCase
 
     public function testIdentifyInvalid(): void
     {
-        $user = Identity::identify('invalid');
+        $user = $this->identifier->identify('invalid');
 
         $this->assertNull($user);
     }

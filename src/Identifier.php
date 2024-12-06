@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 namespace Fyre\Auth;
 
+use Fyre\Config\Config;
 use Fyre\Entity\Entity;
 use Fyre\ORM\Model;
 use Fyre\ORM\ModelRegistry;
 
+use function array_replace;
 use function password_hash;
 use function password_needs_rehash;
 use function password_verify;
@@ -14,15 +16,37 @@ use function password_verify;
 use const PASSWORD_DEFAULT;
 
 /**
- * Identity
+ * Identifier
  */
-abstract class Identity
+class Identifier
 {
-    protected static array $identifierFields = ['email'];
+    protected static array $defaults = [
+        'identifierFields' => ['email'],
+        'passwordField' => 'password',
+        'modelAlias' => 'Users',
+    ];
 
-    protected static Model $model;
+    protected array $identifierFields;
 
-    protected static string $passwordField = 'password';
+    protected Model $model;
+
+    protected string $passwordField;
+
+    /**
+     * New Identifier constructor.
+     *
+     * @param Config $config The Config.
+     * @param ModelRegistry $modelRegistry The ModelRegistry.
+     */
+    public function __construct(Config $config, ModelRegistry $modelRegistry)
+    {
+        $options = array_replace(static::$defaults, $config->get('Auth.identifier', []));
+
+        $this->model = $modelRegistry->use($options['modelAlias']);
+
+        $this->identifierFields = (array) $options['identifierFields'];
+        $this->passwordField = $options['passwordField'];
+    }
 
     /**
      * Attempt to identify a user.
@@ -31,19 +55,19 @@ abstract class Identity
      * @param string $password The user password.
      * @return Entity|null The identifier user.
      */
-    public static function attempt(string $identifier, string $password): Entity|null
+    public function attempt(string $identifier, string $password): Entity|null
     {
         if (!$identifier || !$password) {
             return null;
         }
 
-        $user = static::identify($identifier);
+        $user = $this->identify($identifier);
 
         if (!$user) {
             return null;
         }
 
-        $passwordField = static::getPasswordField();
+        $passwordField = $this->getPasswordField();
         $passwordHash = $user->get($passwordField);
 
         if (!password_verify($password, $passwordHash)) {
@@ -54,7 +78,7 @@ abstract class Identity
             $passwordHash = password_hash($password, PASSWORD_DEFAULT);
             $user->set($passwordField, $passwordHash);
 
-            $Model = static::getModel();
+            $Model = $this->getModel();
 
             $primaryKey = $Model->getPrimaryKey();
             $primaryValues = $user->extract($primaryKey);
@@ -72,9 +96,9 @@ abstract class Identity
      *
      * @return array The user identifier fields.
      */
-    public static function getIdentifierFields(): array
+    public function getIdentifierFields(): array
     {
-        return static::$identifierFields;
+        return $this->identifierFields;
     }
 
     /**
@@ -82,9 +106,9 @@ abstract class Identity
      *
      * @return Model The identity Model.
      */
-    public static function getModel(): Model
+    public function getModel(): Model
     {
-        return static::$model ??= ModelRegistry::use('Users');
+        return $this->model;
     }
 
     /**
@@ -92,9 +116,9 @@ abstract class Identity
      *
      * @return string The user password field.
      */
-    public static function getPasswordField(): string
+    public function getPasswordField(): string
     {
-        return static::$passwordField;
+        return $this->passwordField;
     }
 
     /**
@@ -103,13 +127,13 @@ abstract class Identity
      * @param string $identifier The identifier.
      * @return Entity|null The Entity.
      */
-    public static function identify(string $identifier): Entity|null
+    public function identify(string $identifier): Entity|null
     {
-        $Model = static::getModel();
+        $Model = $this->getModel();
 
         $orConditions = [];
 
-        foreach (static::$identifierFields as $identifierField) {
+        foreach ($this->identifierFields as $identifierField) {
             $orConditions[$Model->aliasField($identifierField)] = $identifier;
         }
 
@@ -118,35 +142,5 @@ abstract class Identity
                 'or' => $orConditions,
             ])
             ->first();
-    }
-
-    /**
-     * Set the identifier fields.
-     *
-     * @param array $identifierFields The identifier fields.
-     */
-    public static function setIdentifierFields($identifierFields): void
-    {
-        static::$identifierFields = $identifierFields;
-    }
-
-    /**
-     * Set the identity Model.
-     *
-     * @param Model $model The identity Model.
-     */
-    public static function setModel(Model $model): void
-    {
-        static::$model = $model;
-    }
-
-    /**
-     * Set the password field.
-     *
-     * @param string $passwordField The password field.
-     */
-    public static function setPasswordField(string $passwordField): void
-    {
-        static::$passwordField = $passwordField;
     }
 }

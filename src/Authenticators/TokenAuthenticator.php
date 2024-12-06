@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Fyre\Auth\Authenticators;
 
 use Fyre\Auth\Authenticator;
-use Fyre\Auth\Identity;
 use Fyre\Entity\Entity;
 use Fyre\Server\ServerRequest;
 
@@ -50,7 +49,7 @@ class TokenAuthenticator extends Authenticator
             return null;
         }
 
-        $Model = Identity::getModel();
+        $Model = $this->auth->identifier()->getModel();
 
         return $Model->find()
             ->where([

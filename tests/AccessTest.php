@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Tests;
 
 use Exception;
-use Fyre\Auth\Access;
 use Fyre\Entity\Entity;
 use Fyre\Error\Exceptions\ForbiddenException;
 use PHPUnit\Framework\TestCase;
@@ -18,7 +17,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ranAfter = false;
-        Access::after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
+        $this->access->after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
             $ranAfter = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -29,7 +28,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertTrue($ranAfter);
@@ -40,7 +39,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ranAfter = false;
-        Access::after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
+        $this->access->after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
             $ranAfter = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -51,7 +50,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertFalse(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertTrue($ranAfter);
@@ -62,14 +61,14 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ranAfter = 0;
-        Access::after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): void {
+        $this->access->after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): void {
             $ranAfter++;
 
             $this->assertInstanceOf(Entity::class, $user);
             $this->assertSame($rule, 'test');
             $this->assertNull($result);
         });
-        Access::after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
+        $this->access->after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
             $ranAfter++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -80,7 +79,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertSame(
@@ -94,7 +93,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ranAfter = 0;
-        Access::after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
+        $this->access->after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
             $ranAfter++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -103,7 +102,7 @@ final class AccessTest extends TestCase
 
             return true;
         });
-        Access::after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
+        $this->access->after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
             $ranAfter++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -114,7 +113,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertSame(
@@ -128,7 +127,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ranAfter = false;
-        Access::after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
+        $this->access->after(function(Entity|null $user, string $rule, bool|null $result) use (&$ranAfter): bool {
             $ranAfter = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -139,7 +138,7 @@ final class AccessTest extends TestCase
         });
 
         $ran = false;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -148,7 +147,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertTrue($ranAfter);
@@ -160,7 +159,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = false;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -169,7 +168,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertTrue($ran);
@@ -180,7 +179,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = false;
-        Access::define('test', function(Entity|null $user, string $value) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user, string $value) use (&$ran): bool {
             $ran = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -190,7 +189,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::allows('test', 'test')
+            $this->access->allows('test', 'test')
         );
 
         $this->assertTrue($ran);
@@ -201,7 +200,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = false;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -210,7 +209,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertFalse(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertTrue($ran);
@@ -221,14 +220,14 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = 0;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
 
             return true;
         });
-        Access::define('test2', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test2', function(Entity|null $user) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -237,7 +236,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::any(['test', 'test2'])
+            $this->access->any(['test', 'test2'])
         );
 
         $this->assertSame(1, $ran);
@@ -248,7 +247,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = 0;
-        Access::define('test', function(Entity|null $user, string $value) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user, string $value) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -256,7 +255,7 @@ final class AccessTest extends TestCase
 
             return true;
         });
-        Access::define('test2', function(Entity|null $user, string $value) use (&$ran): bool {
+        $this->access->define('test2', function(Entity|null $user, string $value) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -266,7 +265,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::any(['test', 'test2'], 'test')
+            $this->access->any(['test', 'test2'], 'test')
         );
 
         $this->assertSame(1, $ran);
@@ -277,14 +276,14 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = 0;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
 
             return false;
         });
-        Access::define('test2', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test2', function(Entity|null $user) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -293,7 +292,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertFalse(
-            Access::any(['test', 'test2'])
+            $this->access->any(['test', 'test2'])
         );
 
         $this->assertSame(2, $ran);
@@ -304,14 +303,14 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = 0;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
 
             return false;
         });
-        Access::define('test2', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test2', function(Entity|null $user) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -320,7 +319,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::any(['test', 'test2'])
+            $this->access->any(['test', 'test2'])
         );
 
         $this->assertSame(2, $ran);
@@ -331,7 +330,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = false;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -339,7 +338,7 @@ final class AccessTest extends TestCase
             return true;
         });
 
-        Access::authorize('test');
+        $this->access->authorize('test');
 
         $this->assertTrue($ran);
     }
@@ -349,7 +348,7 @@ final class AccessTest extends TestCase
         $this->expectException(ForbiddenException::class);
 
         $ran = false;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran = true;
 
             $this->assertNull($user);
@@ -357,7 +356,7 @@ final class AccessTest extends TestCase
             return false;
         });
 
-        Access::authorize('test');
+        $this->access->authorize('test');
 
         $this->assertTrue($ran);
     }
@@ -367,7 +366,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ranBefore = false;
-        Access::before(function(Entity|null $user, string $rule) use (&$ranBefore): bool {
+        $this->access->before(function(Entity|null $user, string $rule) use (&$ranBefore): bool {
             $ranBefore = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -377,7 +376,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertTrue($ranBefore);
@@ -388,7 +387,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ranBefore = false;
-        Access::before(function(Entity|null $user, string $rule) use (&$ranBefore): bool {
+        $this->access->before(function(Entity|null $user, string $rule) use (&$ranBefore): bool {
             $ranBefore = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -398,7 +397,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertFalse(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertTrue($ranBefore);
@@ -409,13 +408,13 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ranBefore = 0;
-        Access::before(function(Entity|null $user, string $rule) use (&$ranBefore): void {
+        $this->access->before(function(Entity|null $user, string $rule) use (&$ranBefore): void {
             $ranBefore++;
 
             $this->assertInstanceOf(Entity::class, $user);
             $this->assertSame($rule, 'test');
         });
-        Access::before(function(Entity|null $user, string $rule) use (&$ranBefore): bool {
+        $this->access->before(function(Entity|null $user, string $rule) use (&$ranBefore): bool {
             $ranBefore++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -425,7 +424,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertSame(
@@ -439,7 +438,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ranBefore = false;
-        Access::before(function(Entity|null $user, string $rule) use (&$ranBefore): bool {
+        $this->access->before(function(Entity|null $user, string $rule) use (&$ranBefore): bool {
             $ranBefore = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -447,12 +446,12 @@ final class AccessTest extends TestCase
 
             return false;
         });
-        Access::before(function(Entity|null $user, string $rule): void {
+        $this->access->before(function(Entity|null $user, string $rule): void {
             throw new Exception();
         });
 
         $this->assertFalse(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertTrue(
@@ -465,7 +464,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ranBefore = false;
-        Access::before(function(Entity|null $user, string $rule) use (&$ranBefore): bool {
+        $this->access->before(function(Entity|null $user, string $rule) use (&$ranBefore): bool {
             $ranBefore = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -473,12 +472,12 @@ final class AccessTest extends TestCase
 
             return true;
         });
-        Access::before(function(Entity|null $user, string $rule): void {
+        $this->access->before(function(Entity|null $user, string $rule): void {
             throw new Exception();
         });
 
         $this->assertTrue(
-            Access::allows('test')
+            $this->access->allows('test')
         );
 
         $this->assertTrue(
@@ -489,7 +488,7 @@ final class AccessTest extends TestCase
     public function testDenies(): void
     {
         $ran = false;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran = true;
 
             $this->assertNull($user);
@@ -498,7 +497,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::denies('test')
+            $this->access->denies('test')
         );
 
         $this->assertTrue($ran);
@@ -507,7 +506,7 @@ final class AccessTest extends TestCase
     public function testDeniesArguments(): void
     {
         $ran = false;
-        Access::define('test', function(Entity|null $user, string $value) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user, string $value) use (&$ran): bool {
             $ran = true;
 
             $this->assertNull($user);
@@ -517,7 +516,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::denies('test', 'test')
+            $this->access->denies('test', 'test')
         );
 
         $this->assertTrue($ran);
@@ -528,7 +527,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = false;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran = true;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -537,7 +536,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertFalse(
-            Access::denies('test')
+            $this->access->denies('test')
         );
 
         $this->assertTrue($ran);
@@ -548,14 +547,14 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = 0;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
 
             return false;
         });
-        Access::define('test2', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test2', function(Entity|null $user) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -564,7 +563,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::none(['test', 'test2'])
+            $this->access->none(['test', 'test2'])
         );
 
         $this->assertSame(2, $ran);
@@ -575,7 +574,7 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = 0;
-        Access::define('test', function(Entity|null $user, string $value) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user, string $value) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -583,7 +582,7 @@ final class AccessTest extends TestCase
 
             return false;
         });
-        Access::define('test2', function(Entity|null $user, string $value) use (&$ran): bool {
+        $this->access->define('test2', function(Entity|null $user, string $value) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -593,7 +592,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertTrue(
-            Access::none(['test', 'test2'], 'test')
+            $this->access->none(['test', 'test2'], 'test')
         );
 
         $this->assertSame(2, $ran);
@@ -604,14 +603,14 @@ final class AccessTest extends TestCase
         $this->login();
 
         $ran = 0;
-        Access::define('test', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test', function(Entity|null $user) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
 
             return false;
         });
-        Access::define('test2', function(Entity|null $user) use (&$ran): bool {
+        $this->access->define('test2', function(Entity|null $user) use (&$ran): bool {
             $ran++;
 
             $this->assertInstanceOf(Entity::class, $user);
@@ -620,7 +619,7 @@ final class AccessTest extends TestCase
         });
 
         $this->assertFalse(
-            Access::none(['test', 'test2'])
+            $this->access->none(['test', 'test2'])
         );
 
         $this->assertSame(2, $ran);
@@ -630,29 +629,29 @@ final class AccessTest extends TestCase
     {
         $results = [];
 
-        Access::define('test', function() use (&$results): bool {
+        $this->access->define('test', function() use (&$results): bool {
             $results[] = 1;
 
             return true;
         });
 
-        Access::before(function() use (&$results): void {
+        $this->access->before(function() use (&$results): void {
             $results[] = 2;
         });
 
-        Access::before(function() use (&$results): void {
+        $this->access->before(function() use (&$results): void {
             $results[] = 3;
         });
 
-        Access::after(function() use (&$results): void {
+        $this->access->after(function() use (&$results): void {
             $results[] = 4;
         });
 
-        Access::after(function() use (&$results): void {
+        $this->access->after(function() use (&$results): void {
             $results[] = 5;
         });
 
-        Access::allows('test');
+        $this->access->allows('test');
 
         $this->assertSame(
             [2, 3, 1, 4, 5],

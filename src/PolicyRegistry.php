@@ -3,49 +3,98 @@ declare(strict_types=1);
 
 namespace Fyre\Auth;
 
+use Fyre\Container\Container;
 use Fyre\ORM\Model;
 use Fyre\Utility\Inflector;
+use ReflectionClass;
 
 use function array_key_exists;
 use function array_splice;
 use function class_exists;
 use function in_array;
 use function is_subclass_of;
+use function preg_replace;
 use function trim;
 
 /**
  * PolicyRegistry
  */
-abstract class PolicyRegistry
+class PolicyRegistry
 {
-    protected static array $instances = [];
+    protected array $aliases = [];
 
-    protected static array $namespaces = [];
+    protected Container $container;
 
-    protected static array $policyMap = [];
+    protected Inflector $inflector;
+
+    protected array $instances = [];
+
+    protected array $namespaces = [];
+
+    protected array $policyMap = [];
+
+    /**
+     * New PolicyRegistry constructor.
+     *
+     * @param Container $container The Container.
+     * @param Inflector $inflector The Inflector.
+     */
+    public function __construct(Container $container, Inflector $inflector)
+    {
+        $this->container = $container;
+        $this->inflector = $inflector;
+    }
 
     /**
      * Add a namespace for loading policies.
      *
      * @param string $namespace The namespace.
      */
-    public static function addNamespace(string $namespace): void
+    public function addNamespace(string $namespace): void
     {
         $namespace = static::normalizeNamespace($namespace);
 
-        if (!in_array($namespace, static::$namespaces)) {
-            static::$namespaces[] = $namespace;
+        if (!in_array($namespace, $this->namespaces)) {
+            $this->namespaces[] = $namespace;
         }
+    }
+
+    /**
+     * Build a Policy.
+     *
+     * @param string $alias The policy alias.
+     * @return object|null The Policy.
+     */
+    public function build(string $alias): object|null
+    {
+        $alias = $this->resolveAlias($alias);
+
+        if (array_key_exists($alias, $this->policyMap)) {
+            return $this->container->build($this->policyMap[$alias]);
+        }
+
+        $singular = $this->inflector->singularize($alias);
+
+        foreach ($this->namespaces as $namespace) {
+            $fullClass = $namespace.$singular.'Policy';
+
+            if (class_exists($fullClass)) {
+                return $this->container->build($fullClass);
+            }
+        }
+
+        return null;
     }
 
     /**
      * Clear all namespaces and policies.
      */
-    public static function clear(): void
+    public function clear(): void
     {
-        static::$policyMap = [];
-        static::$namespaces = [];
-        static::$instances = [];
+        $this->aliases = [];
+        $this->policyMap = [];
+        $this->namespaces = [];
+        $this->instances = [];
     }
 
     /**
@@ -53,9 +102,9 @@ abstract class PolicyRegistry
      *
      * @return array The namespaces.
      */
-    public static function getNamespaces(): array
+    public function getNamespaces(): array
     {
-        return static::$namespaces;
+        return $this->namespaces;
     }
 
     /**
@@ -64,40 +113,11 @@ abstract class PolicyRegistry
      * @param string $namespace The namespace.
      * @return bool TRUE if the namespace exists, otherwise FALSE.
      */
-    public static function hasNamespace(string $namespace): bool
+    public function hasNamespace(string $namespace): bool
     {
         $namespace = static::normalizeNamespace($namespace);
 
-        return in_array($namespace, static::$namespaces);
-    }
-
-    /**
-     * Load a Policy.
-     *
-     * @param string $alias The policy alias.
-     * @return Policy|null The Policy.
-     */
-    public static function load(string $alias): Policy|null
-    {
-        $alias = static::resolveAlias($alias);
-
-        if (array_key_exists($alias, static::$policyMap)) {
-            $fullClass = static::$policyMap[$alias];
-
-            return new $fullClass($alias);
-        }
-
-        $singular = Inflector::singularize($alias);
-
-        foreach (static::$namespaces as $namespace) {
-            $fullClass = $namespace.$singular.'Policy';
-
-            if (class_exists($fullClass) && is_subclass_of($fullClass, Policy::class)) {
-                return new $fullClass($alias);
-            }
-        }
-
-        return null;
+        return in_array($namespace, $this->namespaces);
     }
 
     /**
@@ -105,71 +125,83 @@ abstract class PolicyRegistry
      *
      * @param string $alias The policy alias.
      * @param string $className The policy class name.
+     * @return PolicyRegistry The PolicyRegistry.
      */
-    public static function map(string $alias, string $className): void
+    public function map(string $alias, string $className): static
     {
-        $alias = static::resolveAlias($alias);
+        $alias = $this->resolveAlias($alias);
 
-        static::$policyMap[$alias] = $className;
+        $this->policyMap[$alias] = $className;
+
+        return $this;
     }
 
     /**
      * Remove a namespace.
      *
      * @param string $namespace The namespace.
-     * @return bool TRUE If the namespace was removed, otherwise FALSE.
+     * @return PolicyRegistry The PolicyRegistry.
      */
-    public static function removeNamespace(string $namespace): bool
+    public function removeNamespace(string $namespace): static
     {
         $namespace = static::normalizeNamespace($namespace);
 
-        foreach (static::$namespaces as $i => $otherNamespace) {
+        foreach ($this->namespaces as $i => $otherNamespace) {
             if ($otherNamespace !== $namespace) {
                 continue;
             }
 
-            array_splice(static::$namespaces, $i, 1);
-
-            return true;
+            array_splice($this->namespaces, $i, 1);
+            break;
         }
 
-        return false;
+        return $this;
+    }
+
+    /**
+     * Resolve a model alias.
+     *
+     * @param string $alias The model alias.
+     * @return string The resolved alias.
+     */
+    public function resolveAlias(string $alias): string
+    {
+        if (array_key_exists($alias, $this->aliases)) {
+            return $this->aliases[$alias];
+        }
+
+        if (class_exists($alias) && is_subclass_of($alias, Model::class)) {
+            $reflect = new ReflectionClass($alias);
+            $alias = $reflect->getProperty('alias')->getDefaultValue() ?: preg_replace('/Model$/', '', $reflect->getShortName());
+        }
+
+        return $this->aliases[$alias] = $alias;
     }
 
     /**
      * Unload a policy.
      *
      * @param string $alias The policy alias.
-     * @return bool TRUE if the policy was removed, otherwise FALSE.
+     * @return PolicyRegistry The PolicyRegistry.
      */
-    public static function unload(string $alias): bool
+    public function unload(string $alias): static
     {
-        $alias = static::resolveAlias($alias);
+        unset($this->instances[$alias]);
 
-        if (!array_key_exists($alias, static::$instances)) {
-            return false;
-        }
-
-        unset(static::$instances[$alias]);
-
-        return true;
+        return $this;
     }
 
     /**
      * Load a shared policy instance.
      *
      * @param string $alias The alias.
-     * @return Policy|null The policy class name.
+     * @return object|null The policy class name.
      */
-    public static function use(string $alias): Policy|null
+    public function use(string $alias): object|null
     {
-        $alias = static::resolveAlias($alias);
+        $alias = $this->resolveAlias($alias);
 
-        if (array_key_exists($alias, static::$instances)) {
-            return static::$instances[$alias];
-        }
-
-        return static::$instances[$alias] = static::load($alias);
+        return $this->instances[$alias] ??= $this->build($alias);
     }
 
     /**
@@ -180,25 +212,6 @@ abstract class PolicyRegistry
      */
     protected static function normalizeNamespace(string $namespace): string
     {
-        $namespace = trim($namespace, '\\');
-
-        return $namespace ?
-            '\\'.$namespace.'\\' :
-            '\\';
-    }
-
-    /**
-     * Resolve a modal alias.
-     *
-     * @param string $alias The modal alias.
-     * @return string The resolved alias.
-     */
-    protected static function resolveAlias(string $alias): string
-    {
-        if (class_exists($alias) && is_a($alias, Model::class, true)) {
-            return (new $alias())->getAlias();
-        }
-
-        return $alias;
+        return trim($namespace, '\\').'\\';
     }
 }

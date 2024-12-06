@@ -3,44 +3,82 @@ declare(strict_types=1);
 
 namespace Fyre\Auth;
 
-use Closure;
+use Fyre\Auth\Exceptions\AuthException;
+use Fyre\Config\Config;
+use Fyre\Container\Container;
 use Fyre\Entity\Entity;
+use Fyre\Http\Uri;
+use Fyre\Router\Router;
 
+use function array_filter;
+use function array_key_exists;
 use function get_class;
+use function is_numeric;
+use function is_subclass_of;
 
 /**
  * Auth
  */
 class Auth
 {
-    protected static Auth|Closure|null $instance = null;
+    protected Access $access;
 
     protected array $authenticators = [];
+
+    protected Container $container;
+
+    protected Identifier $identifier;
+
+    protected string $loginRoute;
+
+    protected Router $router;
 
     protected Entity|null $user = null;
 
     /**
-     * Load a shared Auth instance.
+     * New Auth constructor.
      *
-     * @return Auth The Auth.
+     * @param Container $container The Container.
+     * @param Router $router The Router.
+     * @param Config $config The Config.
      */
-    public static function instance(): static
+    public function __construct(Container $container, Router $router, Config $config)
     {
-        if (static::$instance && static::$instance instanceof Closure) {
-            return (static::$instance)();
-        }
+        $this->container = $container;
+        $this->router = $router;
 
-        return static::$instance ??= new static();
+        $this->loginRoute = $config->get('Auth.loginRoute', 'login');
+
+        $authenticators = $config->get('Auth.authenticators', []);
+
+        foreach ($authenticators as $key => $options) {
+            if (!array_key_exists('className', $options) || !is_subclass_of($options['className'], Authenticator::class)) {
+                throw AuthException::forInvalidAuthenticatorClass($options['className'] ?? '');
+            }
+
+            if (is_numeric($key)) {
+                $key = null;
+            }
+
+            $authenticator = $container->build($options['className'], [
+                'auth' => $this,
+                'options' => $options,
+            ]);
+
+            $this->addAuthenticator($authenticator, $key);
+        }
     }
 
     /**
-     * Set a shared Auth instance.
+     * Get the Access.
      *
-     * @param Auth|Closure $instance The Auth, or a callback that returns the Auth.
+     * @return Access The Access.
      */
-    public static function setInstance(Auth|Closure $instance): void
+    public function access(): Access
     {
-        static::$instance = $instance;
+        return $this->access ??= $this->container->build(Access::class, [
+            'userResolver' => fn(): Entity|null => $this->user(),
+        ]);
     }
 
     /**
@@ -69,13 +107,13 @@ class Auth
      */
     public function attempt(string $identifier, string $password, bool $rememberMe = false): Entity|null
     {
-        $user = Identity::attempt($identifier, $password);
+        $user = $this->identifier()->attempt($identifier, $password);
 
         if (!$user) {
             return null;
         }
 
-        static::login($user, $rememberMe);
+        $this->login($user, $rememberMe);
 
         return $user;
     }
@@ -99,6 +137,31 @@ class Auth
     public function authenticators(): array
     {
         return $this->authenticators;
+    }
+
+    /**
+     * Get the login URL.
+     *
+     * @param string|Uri|null $redirect The redirect URI.
+     * @return string The login URL.
+     */
+    public function getLoginUrl(string|Uri|null $redirect = null): string
+    {
+        return $this->router->url($this->loginRoute, [
+            '?' => array_filter([
+                'url' => (string) $redirect,
+            ]),
+        ]);
+    }
+
+    /**
+     * Get the Identifier.
+     *
+     * @return Identifier The Identifier.
+     */
+    public function identifier(): Identifier
+    {
+        return $this->identifier ??= $this->container->build(Identifier::class);
     }
 
     /**

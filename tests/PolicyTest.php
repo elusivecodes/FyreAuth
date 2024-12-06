@@ -3,9 +3,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Fyre\Auth\Access;
 use Fyre\Error\Exceptions\ForbiddenException;
-use Fyre\ORM\ModelRegistry;
 use PHPUnit\Framework\TestCase;
 use Tests\Mock\Model\PostsModel;
 
@@ -20,14 +18,14 @@ final class PolicyTest extends TestCase
     {
         $this->login();
 
-        Access::authorize('create', 'Posts');
+        $this->access->authorize('create', 'Posts');
     }
 
     public function testPolicyCreateAliasFail(): void
     {
         $this->expectException(ForbiddenException::class);
 
-        Access::authorize('create', 'Posts');
+        $this->access->authorize('create', 'Posts');
     }
 
     /**
@@ -37,14 +35,14 @@ final class PolicyTest extends TestCase
     {
         $this->login();
 
-        Access::authorize('create', PostsModel::class);
+        $this->access->authorize('create', PostsModel::class);
     }
 
     public function testPolicyCreateClassNameFail(): void
     {
         $this->expectException(ForbiddenException::class);
 
-        Access::authorize('create', PostsModel::class);
+        $this->access->authorize('create', PostsModel::class);
     }
 
     /**
@@ -54,18 +52,18 @@ final class PolicyTest extends TestCase
     {
         $this->login();
 
-        $Posts = ModelRegistry::use('Posts');
+        $Posts = $this->modelRegistry->use('Posts');
 
-        Access::authorize('create', $Posts);
+        $this->access->authorize('create', $Posts);
     }
 
     public function testPolicyCreateModelFail(): void
     {
         $this->expectException(ForbiddenException::class);
 
-        $Posts = ModelRegistry::use('Posts');
+        $Posts = $this->modelRegistry->use('Posts');
 
-        Access::authorize('create', $Posts);
+        $this->access->authorize('create', $Posts);
     }
 
     /**
@@ -75,14 +73,14 @@ final class PolicyTest extends TestCase
     {
         $this->login();
 
-        Access::authorize('update', 'Posts', 1);
+        $this->access->authorize('update', 'Posts', 1);
     }
 
     public function testPolicyUpdateAliasFail(): void
     {
         $this->expectException(ForbiddenException::class);
 
-        Access::authorize('update', 'Posts', 1);
+        $this->access->authorize('update', 'Posts', 1);
     }
 
     /**
@@ -92,14 +90,14 @@ final class PolicyTest extends TestCase
     {
         $this->login();
 
-        Access::authorize('update', PostsModel::class, 1);
+        $this->access->authorize('update', PostsModel::class, 1);
     }
 
     public function testPolicyUpdateClassNameFail(): void
     {
         $this->expectException(ForbiddenException::class);
 
-        Access::authorize('update', PostsModel::class, 1);
+        $this->access->authorize('update', PostsModel::class, 1);
     }
 
     /**
@@ -109,22 +107,22 @@ final class PolicyTest extends TestCase
     {
         $this->login();
 
-        $Posts = ModelRegistry::use('Posts');
+        $Posts = $this->modelRegistry->use('Posts');
 
         $post = $Posts->get(1);
 
-        Access::authorize('update', $post);
+        $this->access->authorize('update', $post);
     }
 
     public function testPolicyUpdateEntityFail(): void
     {
         $this->expectException(ForbiddenException::class);
 
-        $Posts = ModelRegistry::use('Posts');
+        $Posts = $this->modelRegistry->use('Posts');
 
         $post = $Posts->get(1);
 
-        Access::authorize('update', $post);
+        $this->access->authorize('update', $post);
     }
 
     /**
@@ -134,17 +132,17 @@ final class PolicyTest extends TestCase
     {
         $this->login();
 
-        $Posts = ModelRegistry::use('Posts');
+        $Posts = $this->modelRegistry->use('Posts');
 
-        Access::authorize('update', $Posts, 1);
+        $this->access->authorize('update', $Posts, 1);
     }
 
     public function testPolicyUpdateModelFail(): void
     {
         $this->expectException(ForbiddenException::class);
 
-        $Posts = ModelRegistry::use('Posts');
+        $Posts = $this->modelRegistry->use('Posts');
 
-        Access::authorize('update', $Posts, 1);
+        $this->access->authorize('update', $Posts, 1);
     }
 }

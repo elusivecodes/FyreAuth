@@ -3,11 +3,12 @@ declare(strict_types=1);
 
 namespace Fyre\Auth\Middleware;
 
+use Closure;
 use Fyre\Auth\Auth;
 use Fyre\Error\Exceptions\UnauthorizedException;
 use Fyre\Middleware\Middleware;
-use Fyre\Middleware\RequestHandler;
 use Fyre\Server\ClientResponse;
+use Fyre\Server\RedirectResponse;
 use Fyre\Server\ServerRequest;
 
 /**
@@ -15,21 +16,39 @@ use Fyre\Server\ServerRequest;
  */
 class AuthenticatedMiddleware extends Middleware
 {
+    protected Auth $auth;
+
     /**
-     * Process a ServerRequest.
+     * New AuthenticatedMiddleware constructor.
+     *
+     * @param Auth $auth The Auth.
+     */
+    public function __construct(Auth $auth)
+    {
+        $this->auth = $auth;
+    }
+
+    /**
+     * Handle a ServerRequest.
      *
      * @param ServerRequest $request The ServerRequest.
-     * @param RequestHandler $handler The RequestHandler.
+     * @param Closure $next The next handler.
      * @return ClientResponse The ClientResponse.
      *
      * @throws UnauthorizedException is the user is not authenticated.
      */
-    public function process(ServerRequest $request, RequestHandler $handler): ClientResponse
+    public function handle(ServerRequest $request, Closure $next): ClientResponse
     {
-        if (Auth::instance()->isLoggedIn()) {
-            return $handler->handle($request);
+        if ($this->auth->isLoggedIn()) {
+            return $next($request);
         }
 
-        throw new UnauthorizedException();
+        if ($request->negotiate('content', ['text/html', 'application/json']) === 'application/json') {
+            throw new UnauthorizedException();
+        }
+
+        $redirect = $this->auth->getLoginUrl($request->getUri());
+
+        return new RedirectResponse($redirect);
     }
 }

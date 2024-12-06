@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Fyre\Auth\Authenticators;
 
 use Fyre\Auth\Authenticator;
-use Fyre\Auth\Identity;
 use Fyre\Entity\Entity;
 use Fyre\Server\ClientResponse;
 use Fyre\Server\ServerRequest;
@@ -58,7 +57,7 @@ class CookieAuthenticator extends Authenticator
 
         [$identifier, $tokenHash] = $data;
 
-        $user = Identity::identify($identifier);
+        $user = $this->auth->identifier()->identify($identifier);
 
         if (!$user) {
             $this->logout();
