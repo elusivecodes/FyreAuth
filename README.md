@@ -41,7 +41,7 @@ use Fyre\Auth\Auth;
 - `$config` is a [*Config*](https://github.com/elusivecodes/FyreConfig).
 
 ```php
-$auth = new Auth($container, $identifier, $router, $config)
+$auth = new Auth($container, $router, $config)
 ```
 
 Default configuration options will be resolved from the "*Auth*" key in the [*Config*](https://github.com/elusivecodes/FyreConfig).
