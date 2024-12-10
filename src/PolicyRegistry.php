@@ -49,14 +49,17 @@ class PolicyRegistry
      * Add a namespace for loading policies.
      *
      * @param string $namespace The namespace.
+     * @return PolicyRegistry The PolicyRegistry.
      */
-    public function addNamespace(string $namespace): void
+    public function addNamespace(string $namespace): static
     {
         $namespace = static::normalizeNamespace($namespace);
 
         if (!in_array($namespace, $this->namespaces)) {
             $this->namespaces[] = $namespace;
         }
+
+        return $this;
     }
 
     /**
