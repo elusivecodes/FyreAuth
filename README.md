@@ -53,6 +53,7 @@ Default configuration options will be resolved from the "*Auth*" key in the [*Co
         - `identifierFields` is string orn array containing the identifier field name(s), and will default to "*email*".
         - `passwordField` is a string representing the password field name, and will default to "*password*".
         - `modelAlias` is a string representing the model alias, and will default to "*Users*".
+        - `queryCallback` is a *Closure* that will execute before running an identify query, and will default to *null*.
 
 ```php
 $container->use(Config::class)->set('Auth', $options);

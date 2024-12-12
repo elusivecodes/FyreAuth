@@ -3,12 +3,14 @@ declare(strict_types=1);
 
 namespace Fyre\Auth;
 
+use Closure;
 use Fyre\Config\Config;
 use Fyre\Entity\Entity;
 use Fyre\ORM\Model;
 use Fyre\ORM\ModelRegistry;
 
 use function array_replace;
+use function count;
 use function password_hash;
 use function password_needs_rehash;
 use function password_verify;
@@ -24,6 +26,7 @@ class Identifier
         'identifierFields' => ['email'],
         'passwordField' => 'password',
         'modelAlias' => 'Users',
+        'queryCallback' => null,
     ];
 
     protected array $identifierFields;
@@ -31,6 +34,8 @@ class Identifier
     protected Model $model;
 
     protected string $passwordField;
+
+    protected Closure|null $queryCallback;
 
     /**
      * New Identifier constructor.
@@ -46,6 +51,7 @@ class Identifier
 
         $this->identifierFields = (array) $options['identifierFields'];
         $this->passwordField = $options['passwordField'];
+        $this->queryCallback = $options['queryCallback'];
     }
 
     /**
@@ -137,10 +143,18 @@ class Identifier
             $orConditions[$Model->aliasField($identifierField)] = $identifier;
         }
 
-        return $Model->find()
-            ->where([
-                'or' => $orConditions,
-            ])
-            ->first();
+        $query = $Model->find();
+
+        if (count($orConditions) > 1) {
+            $query->where(['or' => $orConditions]);
+        } else {
+            $query->where($orConditions);
+        }
+
+        if ($this->queryCallback) {
+            $query = ($this->queryCallback)($query);
+        }
+
+        return $query->first();
     }
 }
