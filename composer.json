@@ -25,7 +25,7 @@
         "fyre/error": "^6.0",
         "fyre/inflector": "^3.0",
         "fyre/middleware": "^6.0",
-        "fyre/orm": "^10.0",
+        "fyre/orm": "^11.0",
         "fyre/router": "^7.0",
         "fyre/server": "^4.1",
         "fyre/session": "^5.0"
