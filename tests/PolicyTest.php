@@ -11,11 +11,10 @@ final class PolicyTest extends TestCase
 {
     use ConnectionTrait;
 
-    /**
-     * @doesNotPerformAssertions
-     */
     public function testPolicyCreateAlias(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $this->login();
 
         $this->access->authorize('create', 'Posts');
@@ -28,11 +27,10 @@ final class PolicyTest extends TestCase
         $this->access->authorize('create', 'Posts');
     }
 
-    /**
-     * @doesNotPerformAssertions
-     */
     public function testPolicyCreateClassName(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $this->login();
 
         $this->access->authorize('create', PostsModel::class);
@@ -45,11 +43,10 @@ final class PolicyTest extends TestCase
         $this->access->authorize('create', PostsModel::class);
     }
 
-    /**
-     * @doesNotPerformAssertions
-     */
     public function testPolicyCreateModel(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $this->login();
 
         $Posts = $this->modelRegistry->use('Posts');
@@ -66,11 +63,10 @@ final class PolicyTest extends TestCase
         $this->access->authorize('create', $Posts);
     }
 
-    /**
-     * @doesNotPerformAssertions
-     */
     public function testPolicyUpdateAlias(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $this->login();
 
         $this->access->authorize('update', 'Posts', 1);
@@ -83,11 +79,10 @@ final class PolicyTest extends TestCase
         $this->access->authorize('update', 'Posts', 1);
     }
 
-    /**
-     * @doesNotPerformAssertions
-     */
     public function testPolicyUpdateClassName(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $this->login();
 
         $this->access->authorize('update', PostsModel::class, 1);
@@ -100,11 +95,10 @@ final class PolicyTest extends TestCase
         $this->access->authorize('update', PostsModel::class, 1);
     }
 
-    /**
-     * @doesNotPerformAssertions
-     */
     public function testPolicyUpdateEntity(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $this->login();
 
         $Posts = $this->modelRegistry->use('Posts');
@@ -125,11 +119,10 @@ final class PolicyTest extends TestCase
         $this->access->authorize('update', $post);
     }
 
-    /**
-     * @doesNotPerformAssertions
-     */
     public function testPolicyUpdateModel(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $this->login();
 
         $Posts = $this->modelRegistry->use('Posts');
