@@ -19,19 +19,18 @@ class SessionAuthenticator extends Authenticator
         'sessionField' => 'id',
     ];
 
-    protected Session $session;
-
     /**
      * New Authenticator constructor.
      *
      * @param Auth $auth The Auth.
      * @param array $options Options for the handler.
      */
-    public function __construct(Auth $auth, Session $session, array $options = [])
-    {
+    public function __construct(
+        Auth $auth,
+        protected Session $session,
+        array $options = []
+    ) {
         parent::__construct($auth, $options);
-
-        $this->session = $session;
     }
 
     /**

@@ -14,17 +14,14 @@ use Fyre\Server\ServerRequest;
  */
 class AuthMiddleware extends Middleware
 {
-    protected Auth $auth;
-
     /**
      * New AuthenticatedMiddleware constructor.
      *
      * @param Auth $auth The Auth.
      */
-    public function __construct(Auth $auth)
-    {
-        $this->auth = $auth;
-    }
+    public function __construct(
+        protected Auth $auth
+    ) {}
 
     /**
      * Handle a ServerRequest.

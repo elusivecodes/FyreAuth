@@ -25,13 +25,9 @@ class Auth
 
     protected array $authenticators = [];
 
-    protected Container $container;
-
     protected Identifier $identifier;
 
     protected string $loginRoute;
-
-    protected Router $router;
 
     protected Entity|null $user = null;
 
@@ -42,11 +38,11 @@ class Auth
      * @param Router $router The Router.
      * @param Config $config The Config.
      */
-    public function __construct(Container $container, Router $router, Config $config)
-    {
-        $this->container = $container;
-        $this->router = $router;
-
+    public function __construct(
+        protected Container $container,
+        protected Router $router,
+        Config $config
+    ) {
         $this->loginRoute = $config->get('Auth.loginRoute', 'login');
 
         $authenticators = $config->get('Auth.authenticators', []);

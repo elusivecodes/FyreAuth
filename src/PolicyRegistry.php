@@ -23,10 +23,6 @@ class PolicyRegistry
 {
     protected array $aliases = [];
 
-    protected Container $container;
-
-    protected Inflector $inflector;
-
     protected array $instances = [];
 
     protected array $namespaces = [];
@@ -39,11 +35,10 @@ class PolicyRegistry
      * @param Container $container The Container.
      * @param Inflector $inflector The Inflector.
      */
-    public function __construct(Container $container, Inflector $inflector)
-    {
-        $this->container = $container;
-        $this->inflector = $inflector;
-    }
+    public function __construct(
+        protected Container $container,
+        protected Inflector $inflector
+    ) {}
 
     /**
      * Add a namespace for loading policies.

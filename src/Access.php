@@ -27,15 +27,7 @@ class Access
 
     protected array $beforeRules = [];
 
-    protected Inflector $inflector;
-
-    protected ModelRegistry $modelRegistry;
-
-    protected PolicyRegistry $policyRegistry;
-
     protected array $rules = [];
-
-    protected Closure $userResolver;
 
     /**
      * New Access constructor.
@@ -45,13 +37,12 @@ class Access
      * @param PolicyRegistry $policyRegistry The PolicyRegistry.
      * @param ModelRegistry $modelRegistry The ModelRegistry.
      */
-    public function __construct(Closure $userResolver, Inflector $inflector, PolicyRegistry $policyRegistry, ModelRegistry $modelRegistry)
-    {
-        $this->userResolver = $userResolver;
-        $this->inflector = $inflector;
-        $this->policyRegistry = $policyRegistry;
-        $this->modelRegistry = $modelRegistry;
-    }
+    public function __construct(
+        protected Closure $userResolver,
+        protected Inflector $inflector,
+        protected PolicyRegistry $policyRegistry,
+        protected ModelRegistry $modelRegistry
+    ) {}
 
     /**
      * Execute a callback after checking rules.
